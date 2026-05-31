@@ -38,7 +38,7 @@ jobs:
           tar czf libre-vmm-${VERSION}-linux-x86_64.tar.gz libre-vmm-${VERSION}-linux-x86_64
           sha256sum libre-vmm-${VERSION}-linux-x86_64.tar.gz > libre-vmm-${VERSION}-linux-x86_64.tar.gz.sha256
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x86_64
           path: |
@@ -59,7 +59,7 @@ jobs:
         run: ln -s packaging/debian debian
       - name: Build .deb (unsigned)
         run: dpkg-buildpackage -b -us -uc
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: deb
           path: ../*.deb
@@ -78,7 +78,7 @@ jobs:
           mkdir -p ~/rpmbuild/SOURCES
           git archive --format=tar.gz --prefix=libre-vmm-0.1.0/ HEAD -o ~/rpmbuild/SOURCES/libre-vmm-0.1.0.tar.gz
           rpmbuild -ba packaging/rpm/libre-vmm.spec
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rpm
           path: ~/rpmbuild/RPMS/x86_64/*.rpm
