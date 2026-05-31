@@ -1,13 +1,11 @@
 # Libre VMM
 
-> A libre alternative to VMware Workstation, built on QEMU/KVM + libvirt + Rust.
+> A libre desktop VM manager for Linux, built on QEMU/KVM + libvirt + Rust.
 
-Libre VMM is a desktop VM manager for Linux that runs production-grade
-virtual machines without the things that make VMware Workstation painful:
-no Broadcom Support Portal, no kernel modules that break every update, no
-XWayland-only display stack, no proprietary disk format. It ships
-Wayland-native, supports **24 guest architectures**, exposes a documented
-**REST API with OpenAPI 3.1**, and is **GPL-3.0-or-later** end to end.
+Libre VMM is a full-lifecycle virtual machine manager with a modern
+desktop GUI, a documented REST API, a CLI with shell completions, and
+support for 24 guest architectures. It is Wayland-native, ships
+declarative TOML/YAML VM specs, and is GPL-3.0-or-later end to end.
 
 [![Status](https://img.shields.io/badge/status-alpha-orange)](https://github.com/LucentOpenSoftware/libre-vmm)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)](CHANGELOG.md)
@@ -16,41 +14,81 @@ Wayland-native, supports **24 guest architectures**, exposes a documented
 
 ---
 
-## Why Libre VMM?
+## What it does
 
-VMware Workstation has good bones but a broken delivery model. Broadcom's
-support portal is a maze, the Linux installer rots with every kernel
-update, there is no first-class CLI or REST API, qcow2 is not supported,
-GPU passthrough is locked behind vSphere, and Wayland is "supported" only
-via XWayland with visible glitches. Libre VMM is what an honest, modern
-replacement looks like.
+Libre VMM sits on top of QEMU and libvirt and gives you one workflow for
+the entire VM lifecycle: build, run, snapshot, clone, migrate, back up,
+restore, retire. Where existing tools force you to mix `virsh`,
+`virt-manager`, `qemu-img`, shell scripts, and a hypervisor's own
+console, Libre VMM unifies the surface — desktop, terminal, and HTTP — on
+top of the same Rust core.
 
-We are **~85-90% feature-equivalent** with VMware Workstation Pro 17 for
-single-host VM management today, and we ship several capabilities that
-VMware Workstation structurally cannot. See
-[`docs/VMWARE-PARITY.md`](docs/VMWARE-PARITY.md) for the full feature
-matrix.
+### Capabilities
 
-### Differentiators
+**VM lifecycle**
 
-These are the answers to "why not VMware?":
+- Full lifecycle controls: create, start, shutdown, force-stop, pause,
+  resume, reboot, suspend-to-disk
+- Snapshot trees with branches, scheduled "AutoProtect" snapshots, and
+  filesystem-consistent (`fsfreeze`) quiesced snapshots
+- Full clones and linked clones via qcow2 backing files
+- Hot-add disks on virtio-blk, virtio-scsi, NVMe, SATA, and IDE buses
+- Restricted VMs with atomic policy save, op-allowlist, and expiration
+- Backup and restore with zstd compression
 
-- **Live migration between hosts** — VMware Workstation can't. Libre VMM has a 4-step GUI wizard with progress and cancel.
-- **GPU passthrough** — single-GPU wizard, multi-GPU, and Looking Glass integration. vSphere-only on VMware.
-- **24 guest architectures** — x86_64, ARM64, RISC-V, MIPS, PPC, s390x, and 18 more. VMware does x86 only.
-- **REST API + OpenAPI 3.1 spec** — Terraform/Ansible-friendly out of the box. VMware has `vmrun`.
-- **qcow2 native** — sparse, encryptable, COW backing files. Strictly better than VMDK.
-- **Cloud-init + autounattend.xml** built in — open, hackable, future-proof.
-- **Wayland-native** — egui + winit. See [`docs/WAYLAND-COMPATIBILITY.md`](docs/WAYLAND-COMPATIBILITY.md).
-- **Per-VM nftables firewall rules** via libvirt nwfilter. VMware has nothing comparable.
-- **Automatic guest port forwarding** — Lima-style detect-and-forward through `qemu-guest-agent`.
-- **Declarative TOML/YAML VM specs** — diffable, version-controllable. VMware's `.vmx` is opaque.
-- **LibreUEFI** — our own EDK2 fork with branding, battery/thermal ACPI extras, and an `fw_cfg` bridge.
-- **Kernel-version-independent** — KVM is in-tree. We don't ship out-of-tree modules.
-- **GPL-3.0-or-later**, no Broadcom portal, no MFA, no "free for X but not Y" licensing.
-- **Network conditioner** (latency, loss, bandwidth) on every NIC.
+**Storage & firmware**
 
-For the full per-feature breakdown, see [`docs/VMWARE-PARITY.md`](docs/VMWARE-PARITY.md).
+- qcow2 native — sparse, encryptable, copy-on-write
+- LUKS-encrypted disks managed through libvirt secrets
+- TPM 2.0 emulation via `swtpm`
+- Secure Boot via LibreUEFI — our own EDK2 fork with branding, battery
+  and thermal ACPI tables, and an `fw_cfg` bridge for guest tooling
+
+**Networking**
+
+- NAT, Bridged, Host-only, and isolated LAN-segment topologies
+- Per-VM firewall rules via libvirt `nwfilter` (nftables under the hood)
+- Network conditioner — latency, loss, and bandwidth limits per NIC
+- Automatic guest port forwarding (Lima-style detect-and-forward through
+  `qemu-guest-agent`)
+
+**Display & guest integration**
+
+- Wayland-native GUI on `eframe` / `egui`
+- VNC and SPICE consoles; SPICE provides clipboard, drag-drop,
+  multi-monitor, and audio
+- `virtiofs` shared folders; `qemu-guest-agent` for time sync, freeze,
+  and host-guest commands
+- Screen recording, Picture-in-Picture, desktop notifications
+
+**Performance**
+
+- Live migration between hosts with a 4-step wizard (progress + cancel)
+- Single-GPU passthrough wizard (TTY switch, hook scripts, sudoers
+  helper that the user installs manually)
+- Multi-GPU passthrough and Looking Glass integration
+- Hugepages, IO threads, io_uring, CPU pinning, per-VM I/O throttle
+
+**Multi-architecture**
+
+- 24 QEMU architectures including x86_64, i386, aarch64, arm, riscv64,
+  riscv32, ppc64, s390x, mips/mips64, sparc, alpha, hppa, m68k,
+  loongarch64, sh4, or1k, microblaze, avr, and xtensa
+- KVM acceleration on same-arch hosts; TCG emulation for cross-arch
+
+**Automation surface**
+
+- REST API with an [OpenAPI 3.1 spec](docs/openapi.json), swagger-ui at
+  `/api/v1/docs`, redoc at `/api/v1/redoc`, `X-API-Key` auth
+- CLI (`vmm`) with 16 subcommands and shell completions for bash, zsh,
+  and fish
+- Declarative `VmConfig` serializable to JSON, TOML, and YAML —
+  diffable, version-controllable
+- Import from libvirt XML, Quickemu `.conf`, VMware `.vmx`, and
+  VirtualBox `.vbox`
+
+For a side-by-side comparison with VMware Workstation Pro, see
+[`docs/VMWARE-PARITY.md`](docs/VMWARE-PARITY.md).
 
 ---
 
@@ -58,19 +96,19 @@ For the full per-feature breakdown, see [`docs/VMWARE-PARITY.md`](docs/VMWARE-PA
 
 ### System requirements
 
-- Linux host with KVM (Intel VT-x or AMD-V enabled in BIOS)
+- Linux host with KVM enabled in BIOS (Intel VT-x or AMD-V)
 - QEMU 8.2 or newer
 - libvirt 10.0 or newer
 - OVMF or LibreUEFI firmware (for UEFI guests)
-- Optional: `swtpm` for TPM 2.0, `looking-glass-client` for low-latency GPU passthrough
+- Optional: `swtpm` for TPM 2.0, `looking-glass-client` for low-latency
+  GPU passthrough
 - Wayland or X11 desktop session
 
 ### Installation
 
 Until Libre VMM lands in distribution repositories, build from source.
-Per-distro packaging manifests live under
-[`packaging/`](packaging/) and are ready to consume once the v0.1.0
-tarball is published.
+Per-distro packaging manifests live under [`packaging/`](packaging/) and
+are ready to consume once the v0.1.0 tarball is published.
 
 #### Debian / Ubuntu
 
@@ -89,9 +127,6 @@ A Debian source package (`debian/control`, `rules`, `postinst`) is in
 
 #### Fedora / RHEL
 
-The RPM spec lives in [`packaging/rpm/`](packaging/rpm/) with a Copr build
-stub. See [`packaging/rpm/README.md`](packaging/rpm/README.md).
-
 ```bash
 git clone https://github.com/LucentOpenSoftware/libre-vmm.git
 cd libre-vmm
@@ -100,16 +135,10 @@ sudo dnf install qemu-kvm libvirt-devel ovmf swtpm cargo rust
 sudo ./scripts/install.sh
 ```
 
+The RPM spec lives in [`packaging/rpm/`](packaging/rpm/) with a Copr
+build stub. See [`packaging/rpm/README.md`](packaging/rpm/README.md).
+
 #### Arch Linux
-
-A PKGBUILD is provided at [`packaging/aur/PKGBUILD`](packaging/aur/PKGBUILD).
-Once submitted to the AUR you will be able to run:
-
-```bash
-yay -S libre-vmm        # planned AUR name
-```
-
-For now, build locally:
 
 ```bash
 git clone https://github.com/LucentOpenSoftware/libre-vmm.git
@@ -117,27 +146,27 @@ cd libre-vmm/packaging/aur
 makepkg -si
 ```
 
-#### Flatpak
+Once submitted to the AUR you will be able to install with `yay -S libre-vmm`.
 
-A Flatpak manifest is at
-[`packaging/flatpak/org.libre_vmm.LibreVmm.yml`](packaging/flatpak/org.libre_vmm.LibreVmm.yml).
-The Flatpak runs under `qemu:///session` so it can manage user-scope VMs
-inside the sandbox.
+#### Flatpak
 
 ```bash
 cd packaging/flatpak
 flatpak-builder --user --install build-dir org.libre_vmm.LibreVmm.yml
 ```
 
+The Flatpak runs under `qemu:///session` so it can manage user-scope VMs
+inside the sandbox.
+
 ### First run
 
 ```bash
 libre-vmm          # launches the GUI; first-run wizard checks the system
-vmm list           # CLI; 16 subcommands, includes shell completions
+vmm list           # CLI with 16 subcommands and shell completions
 vmm-api            # REST API server, X-API-Key auth, OpenAPI docs at /api/v1/docs
 ```
 
-The first-run wizard detects QEMU, KVM, libvirt, OVMF, and swtpm, and
+The first-run wizard detects QEMU, KVM, libvirt, OVMF, and `swtpm`, and
 offers to import existing VMs from libvirt, Quickemu, VirtualBox, and
 VMware libraries.
 
@@ -162,7 +191,7 @@ VMware libraries.
 | `vmm-types` | Pure data types — `VmConfig`, `VmInfo`, enums. No I/O, no platform code. | any (incl. `x86_64-pc-windows-gnu`) |
 | `vmm-core` | libvirt FFI, system integration, hypervisor backend. | Linux |
 | `vmm-gui` | Desktop client built on `eframe` / `egui` 0.30. | Linux (Windows/macOS future) |
-| `vmm-cli` | `clap`-based CLI, 16 subcommands, shell completions. | Linux (Windows/macOS future) |
+| `vmm-cli` | `clap`-based CLI with 16 subcommands and shell completions. | Linux (Windows/macOS future) |
 | `vmm-api` | Axum REST API server, OpenAPI 3.1, swagger-ui, redoc. | Linux (Windows/macOS future) |
 
 The split is deliberate. `vmm-types` already compiles for
@@ -170,7 +199,7 @@ The split is deliberate. `vmm-types` already compiles for
 Windows-host port described in
 [`docs/WINDOWS-PORT.md`](docs/WINDOWS-PORT.md).
 
-Total: ~70,000 lines of Rust across the workspace.
+Total: roughly 70,000 lines of Rust across the workspace.
 
 ---
 
@@ -181,33 +210,15 @@ passthrough. It exposes a REST API. **But it is pre-1.0 software.**
 Expect bugs, missing edge cases, and breaking changes between minor
 versions. Always back up your disks before reverting a snapshot.
 
-### What works today
-
-- Full VM lifecycle (create, start, shutdown, force-stop, pause, resume, reboot, suspend)
-- Snapshot tree with branches, AutoProtect scheduled snapshots, and quiesced (fsfreeze) snapshots
-- Full and linked clones (qcow2 backing files), template VMs
-- LUKS-encrypted disks, swtpm TPM 2.0, Secure Boot via LibreUEFI
-- Hot-add disks on all four buses (virtio-blk, virtio-scsi, NVMe, SATA, IDE)
-- 24 guest architectures (`qemu_archs.rs`)
-- LAN segments (isolated VM-to-VM bridges), NAT, Bridged, Host-only networking
-- Per-VM firewall rules (libvirt nwfilter), network conditioner, NIC bandwidth limits
-- Live migration between hosts (4-step wizard, progress, cancel)
-- Single-GPU passthrough wizard (TTY switch + hook scripts), multi-GPU, Looking Glass
-- REST API with OpenAPI 3.1 spec at [`docs/openapi.json`](docs/openapi.json), swagger-ui at `/api/v1/docs`, redoc at `/api/v1/redoc`
-- Declarative TOML/YAML VM specs (`VmConfig::to_toml` / `to_yaml`)
-- VM discovery and import from libvirt, Quickemu, VirtualBox, VMware libraries
-- First-run wizard (7 steps) with system detection and dependency guidance
-- Cloud-init / autounattend.xml provisioning
-- Screen recording, Picture-in-Picture, desktop notifications
-- Restricted VMs (atomic policy save, op-allowlist, expiration)
-- Backup/restore with zstd compression
-
 ### What is in flight
 
 - **Wave 13.10:** signed releases and in-app updater
-- **Wave 14:** Terraform / Ansible / Vagrant providers, webhook events, Prometheus metrics
-- **Wave 15:** Confidential VMs (SEV-SNP / TDX), reproducible builds, GPU mdev/SR-IOV
-- **Waves 16-20:** Windows host port — see [`docs/WINDOWS-PORT.md`](docs/WINDOWS-PORT.md)
+- **Wave 14:** Terraform / Ansible / Vagrant providers, webhook events,
+  Prometheus metrics
+- **Wave 15:** Confidential VMs (SEV-SNP / TDX), reproducible builds,
+  GPU mdev/SR-IOV
+- **Waves 16–20:** Windows host port — see
+  [`docs/WINDOWS-PORT.md`](docs/WINDOWS-PORT.md)
 
 The full per-wave plan is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
@@ -229,7 +240,7 @@ PKG_CONFIG_PATH=$PWD/lib/pkgconfig cargo test --workspace
 
 ## Documentation
 
-- [VMware Parity & Future Vision](docs/VMWARE-PARITY.md) — feature matrix, differentiators, anti-features
+- [Feature matrix and roadmap](docs/VMWARE-PARITY.md) — capability comparison and future-feature tracker
 - [Implementation Roadmap](docs/ROADMAP.md) — wave-by-wave plan with source attribution
 - [Windows Port Strategy](docs/WINDOWS-PORT.md) — multi-quarter cross-platform plan
 - [Wayland Compatibility](docs/WAYLAND-COMPATIBILITY.md) — Sway / Hyprland / GNOME / KDE matrix
@@ -264,9 +275,9 @@ reports.**
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE) (to be added before v0.1.0
-tag). Contributions are accepted under the same license; see
-[CONTRIBUTING.md](CONTRIBUTING.md) for the DCO sign-off requirement.
+GPL-3.0-or-later. See [LICENSE](LICENSE). Contributions are accepted
+under the same license; see [CONTRIBUTING.md](CONTRIBUTING.md) for the
+DCO sign-off requirement.
 
 ---
 
@@ -274,7 +285,7 @@ tag). Contributions are accepted under the same license; see
 
 Libre VMM stands on a stack of excellent libre projects:
 
-- **QEMU** — 30 years of device emulation we don't have to reinvent
+- **QEMU** — three decades of device emulation we don't have to reinvent
 - **libvirt** — our hypervisor abstraction boundary
 - **TianoCore / EDK2** — the upstream firmware our LibreUEFI fork is based on
 - **eframe / egui** (emilk) — the GUI toolkit
