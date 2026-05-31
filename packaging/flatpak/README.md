@@ -53,7 +53,7 @@ vendored as Flatpak sources. Generate the manifest from `Cargo.lock`:
 
 ```bash
 pip install --user flatpak-cargo-generator
-cd /home/neindev8/Escritorio/VM-Soft/libre-vmm
+cd /path/to/libre-vmm
 flatpak-cargo-generator Cargo.lock -o packaging/flatpak/cargo-sources.json
 ```
 
@@ -65,7 +65,7 @@ This must be re-run any time `Cargo.lock` changes (i.e. after any
 ## Test-building locally
 
 ```bash
-cd /home/neindev8/Escritorio/VM-Soft/libre-vmm
+cd /path/to/libre-vmm
 flatpak install --user flathub \
     org.gnome.Platform//46 \
     org.gnome.Sdk//46 \

@@ -410,91 +410,101 @@ pub fn install_linux_tools(vm_name: &str, distro: &LinuxDistro) -> VmmResult<Str
     Ok(output)
 }
 
+/// Build the standard list of directories to search for a bundled guest-tool
+/// artifact, in priority order.
+///
+/// The order is designed to match how Libre VMM is actually distributed:
+///
+/// 1. **Executable-relative system layout** (`<bindir>/../share/libre-vmm/guest-tools/...`).
+///    Matches the `.deb`/`.rpm` layout: binary in `/usr/bin/`, data in
+///    `/usr/share/libre-vmm/guest-tools/`. Also handles non-standard prefixes
+///    like `/opt/libre-vmm/bin/` → `/opt/libre-vmm/share/libre-vmm/guest-tools/`.
+/// 2. **Executable-relative portable layout** (`<bindir>/../guest-tools/...`).
+///    Matches an unpacked tarball or development build where binaries and
+///    guest-tools sit side-by-side.
+/// 3. **Absolute system data path** (`/usr/share/libre-vmm/guest-tools/...`).
+///    Fallback if `current_exe()` is unavailable or has been moved.
+/// 4. **User data directory** (`~/.local/share/libre-vmm/guest-tools/`).
+///    Per-user install via `scripts/install.sh` or future first-run downloader.
+///
+/// Returns an iterator of `PathBuf` candidates to check with `.exists()`.
+fn guest_tools_search_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(bin_dir) = exe.parent() {
+            // System layout: <prefix>/bin → <prefix>/share/libre-vmm/guest-tools
+            dirs.push(bin_dir.join("../share/libre-vmm/guest-tools"));
+            // Portable layout: <bindir>/../guest-tools (tarball / dev build)
+            dirs.push(bin_dir.join("../guest-tools"));
+        }
+    }
+
+    // Absolute system path (matches the `.deb` install).
+    dirs.push(std::path::PathBuf::from("/usr/share/libre-vmm/guest-tools"));
+
+    // Per-user data directory.
+    if let Some(d) = dirs::data_dir() {
+        dirs.push(d.join("libre-vmm/guest-tools"));
+    }
+
+    dirs
+}
+
 /// Find the bundled guest tools ISO shipped with Libre VMM.
 ///
-/// Prefers the unified `libre-vmm-guest-tools.iso` (VirtIO + SPICE + WinFsp + GPU),
-/// falls back to plain `virtio-win.iso` if the unified one isn't built yet.
+/// Prefers the unified `libre-vmm-guest-tools.iso` (VirtIO + SPICE + WinFsp + GPU)
+/// when available, falling back to the plain Red Hat `virtio-win.iso` if not.
 ///
-/// Searches in order:
-/// 1. Unified ISO relative to executable
-/// 2. Unified ISO in project source tree
-/// 3. Plain virtio-win ISO relative to executable
-/// 4. Plain virtio-win ISO in project source tree
-/// 5. `~/.local/share/libre-vmm/guest-tools/`
-/// 6. System-wide `/usr/share/virtio-win/`
+/// The Windows-specific files live under `<search_dir>/windows/`. As a final
+/// fallback this also checks the Debian/Fedora system path
+/// `/usr/share/virtio-win/virtio-win.iso` for systems where the user has
+/// installed the upstream `virtio-win` package directly.
 pub fn find_bundled_virtio_win_iso() -> Option<String> {
-    let candidates = [
-        // Unified ISO — relative to executable (development / portable)
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-            .map(|d| d.join("../guest-tools/windows/libre-vmm-guest-tools.iso")),
-        // Unified ISO — project source tree (development)
-        Some(std::path::PathBuf::from(
-            "/home/neindev8/Escritorio/VM-Soft/libre-vmm/guest-tools/windows/libre-vmm-guest-tools.iso",
-        )),
-        // Unified ISO — user data directory
-        dirs::data_dir().map(|d| d.join("libre-vmm/guest-tools/libre-vmm-guest-tools.iso")),
-        // Fallback: plain virtio-win ISO — relative to executable
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-            .map(|d| d.join("../guest-tools/windows/virtio-win.iso")),
-        // Fallback: plain virtio-win ISO — project source tree
-        Some(std::path::PathBuf::from(
-            "/home/neindev8/Escritorio/VM-Soft/libre-vmm/guest-tools/windows/virtio-win.iso",
-        )),
-        // Fallback: user data directory
-        dirs::data_dir().map(|d| d.join("libre-vmm/guest-tools/virtio-win.iso")),
-        // System-wide (packaged install)
-        Some(std::path::PathBuf::from(
-            "/usr/share/virtio-win/virtio-win.iso",
-        )),
-    ];
-
-    for candidate in &candidates {
-        if let Some(ref path) = candidate {
-            if path.exists() {
-                if let Some(s) = path.to_str() {
+    // Unified ISO first, then plain virtio-win, across every search directory.
+    let search_dirs = guest_tools_search_dirs();
+    for filename in ["libre-vmm-guest-tools.iso", "virtio-win.iso"] {
+        for dir in &search_dirs {
+            let candidate = dir.join("windows").join(filename);
+            if candidate.exists() {
+                if let Some(s) = candidate.to_str() {
                     info!(path = s, "Found bundled virtio-win ISO");
                     return Some(s.to_string());
                 }
             }
         }
     }
+    // Final fallback: upstream Debian/Fedora virtio-win package path.
+    let upstream = std::path::PathBuf::from("/usr/share/virtio-win/virtio-win.iso");
+    if upstream.exists() {
+        if let Some(s) = upstream.to_str() {
+            info!(path = s, "Found bundled virtio-win ISO");
+            return Some(s.to_string());
+        }
+    }
     None
 }
 
-/// Find the bundled SPICE guest tools installer.
+/// Find the bundled SPICE guest tools installer (Windows `.exe`).
 pub fn find_bundled_spice_tools() -> Option<String> {
-    let candidates = [
-        Some(std::path::PathBuf::from(
-            "/home/neindev8/Escritorio/VM-Soft/libre-vmm/guest-tools/windows/spice-guest-tools.exe",
-        )),
-        dirs::data_dir().map(|d| d.join("libre-vmm/guest-tools/spice-guest-tools.exe")),
-    ];
-    for candidate in &candidates {
-        if let Some(ref path) = candidate {
-            if path.exists() {
-                return path.to_str().map(|s| s.to_string());
+    for dir in guest_tools_search_dirs() {
+        let candidate = dir.join("windows/spice-guest-tools.exe");
+        if candidate.exists() {
+            if let Some(s) = candidate.to_str() {
+                return Some(s.to_string());
             }
         }
     }
     None
 }
 
-/// Find the bundled WinFsp installer.
+/// Find the bundled WinFsp installer (Windows `.msi`).
 pub fn find_bundled_winfsp() -> Option<String> {
-    let candidates = [
-        Some(std::path::PathBuf::from(
-            "/home/neindev8/Escritorio/VM-Soft/libre-vmm/guest-tools/windows/winfsp.msi",
-        )),
-        dirs::data_dir().map(|d| d.join("libre-vmm/guest-tools/winfsp.msi")),
-    ];
-    for candidate in &candidates {
-        if let Some(ref path) = candidate {
-            if path.exists() {
-                return path.to_str().map(|s| s.to_string());
+    for dir in guest_tools_search_dirs() {
+        let candidate = dir.join("windows/winfsp.msi");
+        if candidate.exists() {
+            if let Some(s) = candidate.to_str() {
+                return Some(s.to_string());
             }
         }
     }

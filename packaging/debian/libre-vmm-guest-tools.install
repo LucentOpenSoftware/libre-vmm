@@ -1,0 +1,4 @@
+guest-tools/windows/virtio-win.iso        usr/share/libre-vmm/guest-tools/windows/
+guest-tools/windows/spice-guest-tools.exe usr/share/libre-vmm/guest-tools/windows/
+guest-tools/windows/winfsp.msi            usr/share/libre-vmm/guest-tools/windows/
+guest-tools/README.md                     usr/share/libre-vmm/guest-tools/

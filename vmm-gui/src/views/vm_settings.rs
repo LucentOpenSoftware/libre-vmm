@@ -476,12 +476,19 @@ fn card_boot(app: &mut LibreVmmApp, ui: &mut egui::Ui, is_running: bool) {
                     ui.end_row();
                 }
 
-                // Firmware chooser (only visible when UEFI is enabled)
+                // Firmware chooser (only visible when UEFI is enabled).
+                //
+                // The LibreUEFI paths below are the canonical install locations
+                // a future `libreuefi` distribution package would target. They
+                // mirror Debian's OVMF layout (`/usr/share/OVMF/OVMF_CODE.fd`).
+                // On systems where LibreUEFI isn't installed at these paths,
+                // selecting "LibreUEFI" in the firmware picker will produce a
+                // config that points at non-existent files — the user can then
+                // switch to Custom mode and browse to their own build, or
+                // install a libreuefi package once one is published.
                 if show_secboot {
-                    let libreuefi_code =
-                        "/home/neindev8/Escritorio/VM-Soft/libreuefi/output/OVMF_CODE.fd";
-                    let libreuefi_vars =
-                        "/home/neindev8/Escritorio/VM-Soft/libreuefi/output/OVMF_VARS.fd";
+                    let libreuefi_code = "/usr/share/libreuefi/OVMF_CODE.fd";
+                    let libreuefi_vars = "/usr/share/libreuefi/OVMF_VARS.fd";
 
                     // Determine current firmware mode: 0=System, 1=LibreUEFI, 2=Custom
                     let fw_mode = app

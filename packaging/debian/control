@@ -10,7 +10,7 @@ Rules-Requires-Root: no
 Package: libre-vmm
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, qemu-system-x86, libvirt-daemon-system, libvirt-clients, ovmf, swtpm, swtpm-tools, virt-manager, spice-client-gtk
-Recommends: libvirt-daemon-driver-qemu, qemu-utils, vfio-pci
+Recommends: libvirt-daemon-driver-qemu, qemu-utils, vfio-pci, libre-vmm-guest-tools (= ${binary:Version})
 Suggests: looking-glass-client
 Description: Libre VMM — A libre alternative to VMware Workstation
  A QEMU/KVM-based virtual machine manager with a modern egui-based GUI,
@@ -22,3 +22,32 @@ Description: Libre VMM — A libre alternative to VMware Workstation
  cloud-init / autounattend.xml unattended installs, native Wayland support,
  and import from VMware (.vmx), VirtualBox (.vbox), Libvirt XML, and
  Quickemu (.conf).
+ .
+ Install libre-vmm-guest-tools alongside this package if you intend to run
+ Windows guests — that package bundles virtio-win drivers, the SPICE guest
+ agent, and WinFSP for shared folders.
+
+Package: libre-vmm-guest-tools
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Recommends: libre-vmm
+Description: Bundled guest tools ISOs and installers for Libre VMM Windows guests
+ This package bundles the open-source guest tools needed by Windows VMs
+ running under Libre VMM. It installs them to /usr/share/libre-vmm/guest-tools/
+ so the GUI can offer one-click access to them as a virtual CD/DVD.
+ .
+ Contents:
+  * virtio-win.iso          Red Hat's signed VirtIO drivers for Windows
+                            (network, storage, balloon, RNG, serial). GPLv2.
+  * spice-guest-tools.exe   Clipboard sync, dynamic display resize, drag-drop
+                            agent for Windows guests on SPICE. BSD.
+  * winfsp.msi              Filesystem driver enabling virtiofs shared folders
+                            inside Windows guests. GPLv3.
+ .
+ Install this package alongside libre-vmm to get one-click Windows guest
+ setup. Linux-only users can safely skip it.
+ .
+ This is a single-architecture-independent data package. The Linux guest
+ tools (qemu-guest-agent, spice-vdagent) come from distribution repositories
+ and are not bundled here — install them inside the guest with apt/dnf/pacman.

@@ -1,2 +1,7 @@
-[build]
-rustflags = ["-C", "link-arg=-L/home/neindev8/Escritorio/VM-Soft/libre-vmm/lib"]
+# Cargo configuration for Libre VMM.
+#
+# This file is intentionally minimal. The local-libvirt build workaround
+# (used when distribution `libvirt-dev` packages are unavailable) is
+# handled by `build.sh`, which sets `PKG_CONFIG_PATH` to point at the
+# in-tree `lib/pkgconfig/libvirt.pc`. There is no per-machine path
+# stored here.
