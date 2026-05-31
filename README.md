@@ -1,6 +1,7 @@
 # Libre VMM
 
 > A libre desktop VM manager for Linux, built on QEMU/KVM + libvirt + Rust.
+<img width="1920" height="1080" alt="Screenshot_20260531_121958" src="https://github.com/user-attachments/assets/c4e168ad-727f-4154-8fba-2326f0ed38ab" />
 
 Libre VMM is a full-lifecycle virtual machine manager with a modern
 desktop GUI, a documented REST API, a CLI with shell completions, and
