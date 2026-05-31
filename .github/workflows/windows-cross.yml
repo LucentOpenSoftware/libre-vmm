@@ -1,0 +1,33 @@
+name: Windows Port Progress
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'vmm-types/**'
+      - 'docs/WINDOWS-PORT.md'
+  pull_request:
+    paths:
+      - 'vmm-types/**'
+      - 'docs/WINDOWS-PORT.md'
+  workflow_dispatch:
+
+jobs:
+  windows-cross-vmm-types:
+    name: vmm-types compiles for Windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - run: cargo check -p vmm-types --target x86_64-pc-windows-gnu
+
+  windows-cross-future:
+    name: vmm-types on Windows runner (sanity check)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check -p vmm-types
+      - run: cargo test --lib -p vmm-types

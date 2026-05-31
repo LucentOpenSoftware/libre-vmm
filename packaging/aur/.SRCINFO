@@ -1,0 +1,22 @@
+pkgbase = libre-vmm
+	pkgdesc = A libre alternative to VMware Workstation built on QEMU/KVM + libvirt + Rust
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/LucentOpenSoftware/libre-vmm
+	arch = x86_64
+	license = GPL-3.0-or-later
+	makedepends = cargo
+	makedepends = pkg-config
+	depends = qemu-full
+	depends = libvirt
+	depends = edk2-ovmf
+	depends = swtpm
+	depends = gtk3
+	depends = spice-gtk
+	optdepends = virt-manager: alternative graphical manager
+	optdepends = looking-glass: low-latency display for GPU passthrough
+	optdepends = dnsmasq: NAT networking
+	source = libre-vmm-0.1.0.tar.gz::https://github.com/LucentOpenSoftware/libre-vmm/archive/v0.1.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = libre-vmm

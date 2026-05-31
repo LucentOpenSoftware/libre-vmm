@@ -1,0 +1,64 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest an improvement to libre-vmm.
+
+  - type: checkboxes
+    id: prereqs
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have searched the existing issues and not found a duplicate
+          required: true
+        - label: I have checked `docs/ROADMAP.md` and `docs/VMWARE-PARITY.md` to confirm this is not already planned
+          required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the user-facing problem or limitation, not the solution yet.
+      placeholder: "When I try to X, libre-vmm doesn't ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What you'd like to see implemented. Mockups, command sketches, or API ideas welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried or competing approaches you weighed.
+
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap mapping
+      description: Does this map to a wave in `docs/ROADMAP.md` or a row in `docs/VMWARE-PARITY.md`? Link if so.
+      placeholder: "Wave 3 — Snapshots, or VMWARE-PARITY.md row: Linked Clones"
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Are you willing to contribute this?
+      options:
+        - "Yes — I can submit a PR"
+        - "Yes — with mentorship/guidance"
+        - "No — just proposing the idea"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context

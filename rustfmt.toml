@@ -1,0 +1,33 @@
+# Libre VMM Rust formatting configuration.
+#
+# Keep settings minimal — defer to rustfmt defaults unless there's a strong reason
+# to override. Wide diffs from rustfmt config changes are painful.
+
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Unix"
+use_small_heuristics = "Default"
+
+# Misc (stable options)
+match_block_trailing_comma = true
+
+# --- Unstable options ---
+# The options below require `cargo +nightly fmt` (or `unstable_features = true`
+# with a nightly toolchain) to take effect. Stable rustfmt will silently ignore
+# them. Re-evaluate moving these into the stable section if/when rustfmt
+# stabilises them upstream.
+unstable_features = true
+
+# Imports
+imports_granularity = "Module"   # unstable
+group_imports = "StdExternalCrate" # unstable
+reorder_imports = true
+
+# Comments
+wrap_comments = false   # unstable — disabled to avoid unintended wraps in CWE annotations
+comment_width = 100     # unstable
+
+# Trailing commas
+trailing_comma = "Vertical" # unstable

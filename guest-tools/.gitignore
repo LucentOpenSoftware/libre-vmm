@@ -1,0 +1,5 @@
+# Large binary downloads — not tracked in git
+windows/virtio-win.iso
+windows/spice-guest-tools.exe
+windows/winfsp.msi
+windows/libre-vmm-guest-tools.iso

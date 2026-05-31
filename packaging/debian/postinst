@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+# Enable libvirtd
+systemctl enable --now libvirtd 2>/dev/null || true
+# Inform user about group membership
+echo "Libre VMM installed. To run VMs without sudo:"
+echo "  sudo usermod -aG libvirt,kvm \$USER"
+echo "  Log out and back in for group membership to take effect."
+exit 0

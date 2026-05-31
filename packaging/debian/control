@@ -1,0 +1,24 @@
+Source: libre-vmm
+Section: utils
+Priority: optional
+Maintainer: Libre VMM Contributors <noreply@github.com>
+Build-Depends: debhelper-compat (= 13), cargo, rustc, libvirt-dev, pkg-config, libgtk-3-dev
+Standards-Version: 4.6.0
+Homepage: https://github.com/LucentOpenSoftware/libre-vmm
+Rules-Requires-Root: no
+
+Package: libre-vmm
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, qemu-system-x86, libvirt-daemon-system, libvirt-clients, ovmf, swtpm, swtpm-tools, virt-manager, spice-client-gtk
+Recommends: libvirt-daemon-driver-qemu, qemu-utils, vfio-pci
+Suggests: looking-glass-client
+Description: Libre VMM — A libre alternative to VMware Workstation
+ A QEMU/KVM-based virtual machine manager with a modern egui-based GUI,
+ REST API, CLI, and 24-architecture support. Built in Rust for security
+ and reliability.
+ .
+ Features include live migration, GPU passthrough (single and multi-GPU),
+ LUKS-encrypted disks, TPM 2.0 emulation, per-VM nftables firewall rules,
+ cloud-init / autounattend.xml unattended installs, native Wayland support,
+ and import from VMware (.vmx), VirtualBox (.vbox), Libvirt XML, and
+ Quickemu (.conf).

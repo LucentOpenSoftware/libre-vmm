@@ -1,0 +1,40 @@
+[package]
+name = "vmm-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "GUI frontend for Libre VMM"
+
+[dependencies]
+vmm-core = { workspace = true }
+# Wave 16.A1 (Windows port foundation): pure types are also available via
+# vmm-core re-exports, but importing them directly here is the start of the
+# eventual split where vmm-gui drops the vmm-core dep on the Windows client.
+vmm-types = { workspace = true }
+eframe = { version = "0.30", features = ["persistence"] }
+egui_extras = { version = "0.30", features = ["image"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+rfd = "0.15"
+open = "5"
+chrono = "0.4"
+dirs = { workspace = true }
+rust-i18n = "3"
+sys-locale = "0.3"
+
+[build-dependencies]
+pkg-config = "0.3"

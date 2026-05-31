@@ -1,0 +1,73 @@
+name: Windows Port Feedback
+description: "Report progress, bugs, or blockers for the Windows port"
+labels: ["windows-port", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for feedback specific to running libre-vmm on Windows.
+        See `docs/WINDOWS-PORT.md` for the phased roadmap (Phases A through E).
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which Windows port phase does this concern?
+      options:
+        - "Phase A — vmm-types cross-compiles"
+        - "Phase B — CLI subset on Windows"
+        - "Phase C — WHPX / libvirt-Windows backend"
+        - "Phase D — GUI on Windows"
+        - "Phase E — Installer (MSI) and signing"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: input
+    id: component
+    attributes:
+      label: Specific component
+      description: Which crate or subsystem is affected?
+      placeholder: "vmm-types, vmm-cli, vmm-core backend, GUI window, ..."
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: "Output of `winver` (e.g. Windows 11 23H2 build 22631)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Hypervisor backend status
+      options:
+        - "WHPX detected and working"
+        - "WHPX detected but not connecting"
+        - "WHPX not detected"
+        - "libvirt-Windows in use"
+        - "Not yet tested"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the behavior or issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "Output with RUST_LOG=debug, or relevant Windows event log entries"
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context

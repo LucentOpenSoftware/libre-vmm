@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.libre_vmm.LibreVmm</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Libre VMM</name>
+  <summary>A libre alternative to VMware Workstation</summary>
+  <description>
+    <p>
+      Libre VMM is a QEMU/KVM-based virtual machine manager with a modern
+      egui-based GUI, a REST API, a CLI, and support for 24 guest architectures.
+      Built in Rust for security and reliability.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Live migration between hosts (VMware Workstation can't)</li>
+      <li>GPU passthrough — single GPU + multi-GPU + Looking Glass</li>
+      <li>LUKS-encrypted disks, TPM 2.0 emulation</li>
+      <li>Per-VM nftables firewall rules</li>
+      <li>Cloud-init / autounattend.xml unattended installs</li>
+      <li>Native Wayland support</li>
+      <li>Import from VMware (.vmx), VirtualBox (.vbox), Libvirt XML, Quickemu (.conf)</li>
+      <li>Declarative VM configs in TOML or YAML — diffable, version-controllable</li>
+      <li>REST API with OpenAPI spec — Terraform/Ansible-friendly</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">org.libre_vmm.LibreVmm.desktop</launchable>
+  <url type="homepage">https://github.com/LucentOpenSoftware/libre-vmm</url>
+  <url type="bugtracker">https://github.com/LucentOpenSoftware/libre-vmm/issues</url>
+  <provides>
+    <binary>libre-vmm</binary>
+    <binary>vmm</binary>
+    <binary>vmm-api</binary>
+  </provides>
+  <categories>
+    <category>System</category>
+    <category>Emulator</category>
+  </categories>
+  <keywords>
+    <keyword>virtual machine</keyword>
+    <keyword>VM</keyword>
+    <keyword>qemu</keyword>
+    <keyword>kvm</keyword>
+    <keyword>virtualization</keyword>
+    <keyword>libvirt</keyword>
+  </keywords>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-06-01">
+      <description>
+        <p>Initial release with Wave 1-13 features.</p>
+      </description>
+    </release>
+  </releases>
+</component>

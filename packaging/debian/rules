@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release --workspace
+
+override_dh_auto_install:
+	# Install binaries
+	install -Dm755 target/release/vmm-gui debian/libre-vmm/usr/bin/libre-vmm
+	install -Dm755 target/release/vmm-cli debian/libre-vmm/usr/bin/vmm
+	install -Dm755 target/release/vmm-api debian/libre-vmm/usr/bin/vmm-api
+	# Desktop file
+	install -Dm644 libre-vmm.desktop debian/libre-vmm/usr/share/applications/libre-vmm.desktop
+	# Icons (if any in assets/)
+	if [ -f assets/icon.png ]; then install -Dm644 assets/icon.png debian/libre-vmm/usr/share/icons/hicolor/256x256/apps/libre-vmm.png; fi
+
+override_dh_auto_test:
+	# Tests need libvirt at build time; skip in package build
+	true

@@ -1,0 +1,1758 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Libre VMM REST API",
+    "description": "A libre alternative to VMware Workstation, with a real REST API that VMware Workstation does not provide.\n\n## Authentication\n\nAll endpoints except `GET /api/v1/health` and the docs themselves require an `X-API-Key` header. The key is printed once on stderr when the server starts (or set via `--api-key`).\n\n```\ncurl -H 'X-API-Key: <key>' http://127.0.0.1:8420/api/v1/vms\n```\n\n## Rate limiting\n\nAfter 10 failed auth attempts within 60 s the server locks out **all** requests for 5 minutes. This is a global limiter (per-IP is trivially bypassed via proxies).\n\n## Errors\n\nAll 4xx/5xx responses share the [`ApiErrorResponse`] envelope. Internal error details (libvirt messages, file paths) are scrubbed server-side (CWE-209).",
+    "license": {
+      "name": "GPL-3.0-or-later"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8420",
+      "description": "Default localhost binding"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Liveness probe (unauthenticated)",
+        "description": "Returns server status without contacting libvirt. Does NOT require an API key — safe for load balancers and uptime checks. `libvirt_connected` is always returned as `false`; use `/api/v1/system/info` for the real value.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Server is reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/info": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Hypervisor and host info",
+        "description": "Returns the hypervisor product/version, KVM availability, and connection family. The full libvirt connection URI is deliberately omitted (CWE-200).",
+        "operationId": "system_info",
+        "responses": {
+          "200": {
+            "description": "Hypervisor info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error (e.g., libvirt unreachable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms": {
+      "get": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "List all VMs",
+        "description": "Returns every VM defined in the hypervisor, including running, paused, and shut-off VMs. No pagination — the list is typically small (single-user workstation use case).",
+        "operationId": "list_vms",
+        "responses": {
+          "200": {
+            "description": "List of VMs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Create a new VM",
+        "description": "Defines a new VM from a built-in template. The VM is created in the `shut off` state — call `POST /api/v1/vms/{name}/start` to boot it. All numeric fields are clamped to safe ranges; oversized strings and path-traversal in `iso_path` are rejected.",
+        "operationId": "create_vm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "VM created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad name, out-of-range numbers, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type must be application/json"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}": {
+      "get": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Get a single VM by name",
+        "description": "Returns details of one VM. The `name` path parameter is validated server-side (1-64 chars, alphanumerics + `-_.`) before being passed to libvirt.",
+        "operationId": "get_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Delete a VM (and its disks)",
+        "description": "Removes the VM definition AND the backing disk images. This is irreversible. If the VM is running it will be force-stopped first.",
+        "operationId": "delete_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/clone": {
+      "post": {
+        "tags": [
+          "Cloning"
+        ],
+        "summary": "Clone a VM (full or linked)",
+        "description": "Creates a copy of an existing VM. `full` clones produce an independent disk image. `linked` clones use copy-on-write on top of the source disk, which is fast but ties the clone to the source's lifecycle.",
+        "operationId": "clone_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Source VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Clone created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid source or clone name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type must be application/json"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/console": {
+      "post": {
+        "tags": [
+          "Console"
+        ],
+        "summary": "Start a noVNC browser console for a running VM",
+        "description": "Spawns a noVNC proxy that bridges the VM's VNC server to a browser-friendly WebSocket. The returned URL can be opened in any browser. The VM must be running. The proxy continues to run until the API server exits.",
+        "operationId": "start_console",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Console started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VM not running or invalid ports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type must be application/json"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/pause": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Pause a running VM",
+        "description": "Suspends VM execution while keeping its memory resident. Resume with `/resume`.",
+        "operationId": "pause_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VM is not running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/reboot": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Reboot a VM",
+        "description": "Sends an ACPI reboot signal to the guest OS. The guest may ignore it.",
+        "operationId": "reboot_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reboot signal sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VM is not running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/resume": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Resume a paused VM",
+        "description": "Resumes execution of a VM that was paused via `/pause`.",
+        "operationId": "resume_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM resumed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/shutdown": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Graceful shutdown",
+        "description": "Sends an ACPI shutdown signal to the guest OS. The guest may ignore it. For an unconditional power-off use `/stop` instead.",
+        "operationId": "shutdown_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shutdown signal sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VM is not running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/snapshots": {
+      "get": {
+        "tags": [
+          "Snapshots"
+        ],
+        "summary": "List snapshots for a VM",
+        "description": "Returns every snapshot defined for the given VM, oldest first. An empty list is returned (not 404) when the VM has no snapshots.",
+        "operationId": "list_snapshots",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot list (possibly empty)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SnapshotResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Snapshots"
+        ],
+        "summary": "Create a snapshot",
+        "description": "Captures the current VM state (and memory, if running) as a named snapshot. The snapshot name must be 1-128 chars (alphanumerics + ` -_.()`) and must not start with `-`. The description must not contain `<`, `>`, or `&` (XML injection defense, CWE-91).",
+        "operationId": "create_snapshot",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Snapshot created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name or description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type must be application/json"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/snapshots/{snap}": {
+      "delete": {
+        "tags": [
+          "Snapshots"
+        ],
+        "summary": "Delete a snapshot",
+        "description": "Removes a snapshot from the VM. The VM itself is not affected. Irreversible.",
+        "operationId": "delete_snapshot",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          },
+          {
+            "name": "snap",
+            "in": "path",
+            "description": "Snapshot name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "pre-upgrade"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM or snapshot name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM or snapshot not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/snapshots/{snap}/revert": {
+      "post": {
+        "tags": [
+          "Snapshots"
+        ],
+        "summary": "Revert to a snapshot",
+        "description": "Rolls the VM back to the state captured by the snapshot. Any state written since the snapshot is discarded.",
+        "operationId": "revert_snapshot",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          },
+          {
+            "name": "snap",
+            "in": "path",
+            "description": "Snapshot name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "pre-upgrade"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revert succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM or snapshot name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM or snapshot not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/start": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Start a VM",
+        "description": "Boots a previously-created VM. Returns 409 if the VM is already running.",
+        "operationId": "start_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VM is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/vms/{name}/stop": {
+      "post": {
+        "tags": [
+          "VMs"
+        ],
+        "summary": "Force-stop a VM",
+        "description": "Immediately powers off the VM (equivalent to pulling the plug). Risks data loss in the guest. Prefer `/shutdown` for clean shutdowns.",
+        "operationId": "stop_vm",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "VM name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "arch-dev"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VM force-stopped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VM name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VM not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VM is not running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrorResponse": {
+        "type": "object",
+        "description": "Standard error envelope returned for all 4xx and 5xx responses.",
+        "required": [
+          "error",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "HTTP status code, duplicated in the body for client convenience.",
+            "minimum": 0
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error description. Internal details are stripped server-side."
+          }
+        }
+      },
+      "CloneRequest": {
+        "type": "object",
+        "required": [
+          "new_name"
+        ],
+        "properties": {
+          "clone_type": {
+            "type": "string",
+            "description": "Clone type: `full` (independent copy) or `linked` (copy-on-write, shares base disk). Defaults to `full`.",
+            "example": "full"
+          },
+          "new_name": {
+            "type": "string",
+            "description": "Name for the cloned VM (same validation rules as VM creation).",
+            "example": "arch-dev-clone"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConsoleRequest": {
+        "type": "object",
+        "properties": {
+          "listen_port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Non-privileged listen port for the noVNC proxy (>= 1024). Defaults to 6080.",
+            "example": 6080,
+            "minimum": 1024
+          },
+          "vnc_port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "VNC port of the running VM. Defaults to 5900.",
+            "example": 5900,
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConsoleResponse": {
+        "type": "object",
+        "required": [
+          "url",
+          "port",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Human-readable status message."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "TCP port the noVNC proxy is listening on.",
+            "minimum": 0
+          },
+          "url": {
+            "type": "string",
+            "description": "Browser URL that serves the noVNC client (open in any browser)."
+          }
+        }
+      },
+      "CreateSnapshotRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Optional description (max 1024 chars). Must not contain `<`, `>`, or `&`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Snapshot name (1-128 chars, alphanumerics + ` -_.()`). Must not start with `-`.",
+            "example": "pre-upgrade"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateVmRequest": {
+        "type": "object",
+        "description": "SECURITY: `deny_unknown_fields` rejects payloads with unexpected keys (CWE-20).\nThis prevents mass-assignment style attacks and limits deserialization surface.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Optional free-form description (max 1024 chars)."
+          },
+          "disk_size_gib": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Primary disk size in GiB (1 - 16384). Defaults to 25.",
+            "example": 25,
+            "maximum": 16384,
+            "minimum": 1
+          },
+          "iso_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional path to a boot ISO on the host. Must not contain `..`."
+          },
+          "memory_mib": {
+            "type": "integer",
+            "format": "int64",
+            "description": "RAM in MiB (64 - 1048576). Defaults to 4096.",
+            "example": 4096,
+            "maximum": 1048576,
+            "minimum": 64
+          },
+          "name": {
+            "type": "string",
+            "description": "VM name (1-64 chars, alphanumerics + `-_.`). Must be unique.",
+            "example": "arch-dev"
+          },
+          "template": {
+            "type": "string",
+            "description": "Template ID or label substring. Defaults to `arch-linux`.",
+            "example": "arch-linux"
+          },
+          "uefi": {
+            "type": "boolean",
+            "description": "Boot via UEFI (LibreUEFI/OVMF). Defaults to `true`."
+          },
+          "vcpus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Virtual CPU count (1-256). Defaults to 2.",
+            "example": 2,
+            "maximum": 256,
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "libvirt_connected"
+        ],
+        "properties": {
+          "libvirt_connected": {
+            "type": "boolean",
+            "description": "Libvirt connection status. Always `false` over this endpoint —\nit is intentionally redacted from the unauthenticated health probe.\nUse `GET /api/v1/system/info` (authenticated) for the real value."
+          },
+          "status": {
+            "type": "string",
+            "description": "Always `\"ok\"` if the server is reachable."
+          },
+          "version": {
+            "type": "string",
+            "description": "Server version (matches the `vmm-api` crate version)."
+          }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Human-readable status message describing the action result."
+          }
+        }
+      },
+      "SnapshotResponse": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "creation_time",
+          "state"
+        ],
+        "properties": {
+          "creation_time": {
+            "type": "string",
+            "description": "ISO-8601-ish timestamp string of when the snapshot was taken."
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-form description supplied at creation time."
+          },
+          "name": {
+            "type": "string",
+            "description": "Snapshot name (unique per VM)."
+          },
+          "state": {
+            "type": "string",
+            "description": "VM state captured by the snapshot (`running`, `shutoff`, etc.)."
+          }
+        }
+      },
+      "SystemInfoResponse": {
+        "type": "object",
+        "description": "SECURITY: connection_uri deliberately excluded — it can contain socket paths\nand host information that aids reconnaissance (CWE-200).",
+        "required": [
+          "hypervisor",
+          "kvm_available",
+          "connection_type"
+        ],
+        "properties": {
+          "connection_type": {
+            "type": "string",
+            "description": "Connection family: `qemu/kvm`, `xen`, or `unknown`."
+          },
+          "hypervisor": {
+            "type": "string",
+            "description": "Hypervisor product/version string (e.g. `QEMU 8.2.2`)."
+          },
+          "kvm_available": {
+            "type": "boolean",
+            "description": "Whether KVM acceleration is available on the host."
+          }
+        }
+      },
+      "VmListResponse": {
+        "type": "object",
+        "required": [
+          "vms",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of VMs in `vms`. Mirrors `vms.len()` for client convenience.",
+            "minimum": 0
+          },
+          "vms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VmResponse"
+            },
+            "description": "All VMs known to the hypervisor (regardless of state)."
+          }
+        }
+      },
+      "VmResponse": {
+        "type": "object",
+        "required": [
+          "name",
+          "uuid",
+          "state",
+          "vcpus",
+          "memory_mib",
+          "cpu_time_ns"
+        ],
+        "properties": {
+          "cpu_time_ns": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Cumulative CPU time consumed by the VM in nanoseconds.",
+            "minimum": 0
+          },
+          "memory_mib": {
+            "type": "integer",
+            "format": "int64",
+            "description": "RAM allocation in MiB.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "VM name (unique within the hypervisor)."
+          },
+          "state": {
+            "type": "string",
+            "description": "Current state: `running`, `paused`, `shut off`, `crashed`, etc."
+          },
+          "uuid": {
+            "type": "string",
+            "description": "Libvirt UUID for the VM."
+          },
+          "vcpus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of virtual CPUs allocated.",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "Hypervisor and host info, plus the unauthenticated health probe."
+    },
+    {
+      "name": "VMs",
+      "description": "VM lifecycle: create, delete, start, stop, pause, resume, reboot."
+    },
+    {
+      "name": "Snapshots",
+      "description": "Per-VM snapshot create / list / revert / delete."
+    },
+    {
+      "name": "Console",
+      "description": "Browser-based noVNC console access for running VMs."
+    },
+    {
+      "name": "Cloning",
+      "description": "Full and linked VM cloning."
+    }
+  ]
+}

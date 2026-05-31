@@ -1,0 +1,77 @@
+name: VMware Parity Gap
+description: "Report a VMware Workstation feature that libre-vmm does not yet match"
+labels: ["parity-gap", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for "VMware does X but libre-vmm doesn't" reports.
+        For generic feature requests not tied to VMware parity, use the Feature Request template instead.
+
+  - type: input
+    id: vmware-feature
+    attributes:
+      label: VMware feature name
+      description: Name the feature as VMware calls it
+      placeholder: "Linked Clones / Unity Mode / Encrypted VMs / ..."
+    validations:
+      required: true
+
+  - type: input
+    id: vmware-version
+    attributes:
+      label: VMware version observed
+      description: Which version of VMware Workstation (or Fusion / Player) did you see this in?
+      placeholder: "Workstation 17.5 Pro"
+    validations:
+      required: true
+
+  - type: input
+    id: parity-row
+    attributes:
+      label: Parity matrix location
+      description: Link to the row in `docs/VMWARE-PARITY.md` this maps to (if any)
+      placeholder: "docs/VMWARE-PARITY.md#linked-clones"
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What VMware does
+      description: Describe the VMware behavior and where it appears in the UI / CLI / API
+    validations:
+      required: true
+
+  - type: textarea
+    id: libre-vmm-status
+    attributes:
+      label: Current libre-vmm status
+      description: What does libre-vmm do today? Missing entirely, partial implementation, or different UX?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: in-wave
+    attributes:
+      label: Is this currently in a wave plan?
+      options:
+        - "Yes — already planned (link in additional context)"
+        - "No — not in any wave yet"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested priority
+      options:
+        - "P0 — blocks switching from VMware"
+        - "P1 — important but workaround exists"
+        - "P2 — nice to have"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context, screenshots, or links

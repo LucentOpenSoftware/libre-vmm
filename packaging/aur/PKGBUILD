@@ -1,0 +1,53 @@
+# Maintainer: Libre VMM Contributors
+pkgname=libre-vmm
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A libre alternative to VMware Workstation built on QEMU/KVM + libvirt + Rust"
+arch=('x86_64')
+url="https://github.com/LucentOpenSoftware/libre-vmm"
+license=('GPL-3.0-or-later')
+depends=(
+    'qemu-full'
+    'libvirt'
+    'edk2-ovmf'
+    'swtpm'
+    'gtk3'
+    'spice-gtk'
+)
+optdepends=(
+    'virt-manager: alternative graphical manager'
+    'looking-glass: low-latency display for GPU passthrough'
+    'dnsmasq: NAT networking'
+)
+makedepends=('cargo' 'pkg-config')
+provides=("$pkgname")
+conflicts=()
+source=("$pkgname-$pkgver.tar.gz::https://github.com/LucentOpenSoftware/libre-vmm/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')  # replace with real hash on first release
+
+prepare() {
+    cd "$pkgname-$pkgver"
+    cargo fetch --target "$CARCH-unknown-linux-gnu"
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+    export CARGO_TARGET_DIR=target
+    cargo build --release --frozen --workspace
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    # cargo test --release --frozen --workspace
+    # Tests require libvirt at runtime; skip in packaging build
+    true
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 target/release/vmm-gui "$pkgdir/usr/bin/libre-vmm"
+    install -Dm755 target/release/vmm-cli "$pkgdir/usr/bin/vmm"
+    install -Dm755 target/release/vmm-api "$pkgdir/usr/bin/vmm-api"
+    install -Dm644 libre-vmm.desktop "$pkgdir/usr/share/applications/libre-vmm.desktop"
+    [ -f assets/icon.png ] && install -Dm644 assets/icon.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/libre-vmm.png"
+}

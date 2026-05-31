@@ -1,0 +1,43 @@
+[package]
+name = "vmm-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "REST API server for Libre VMM — remote management via HTTP"
+
+[lib]
+name = "vmm_api"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vmm-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "gen_openapi"
+path = "src/bin/gen_openapi.rs"
+
+[dependencies]
+vmm-core = { workspace = true }
+axum = "0.8"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tower = { version = "0.5", features = ["limit"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit", "set-header"] }
+http = "1"
+uuid = { workspace = true }
+utoipa = { version = "5", features = ["axum_extras", "uuid"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+utoipa-redoc = { version = "6", features = ["axum"] }

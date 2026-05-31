@@ -1,0 +1,5 @@
+# Copr build configuration for libre-vmm
+# Submit via `copr-cli` or the Copr web UI.
+# Build with:
+#   copr-cli create libre-vmm --chroot fedora-39-x86_64 --chroot fedora-40-x86_64
+#   copr-cli build libre-vmm <git-url>

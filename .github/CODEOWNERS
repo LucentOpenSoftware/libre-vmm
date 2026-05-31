@@ -1,0 +1,29 @@
+# Code ownership for review routing.
+# When a path matches, the user/team is auto-requested for review.
+#
+# Update with real GitHub handles after initial publication.
+
+# Default owner for everything
+*           @LucentOpenSoftware
+
+# Core platform
+/vmm-core/   @LucentOpenSoftware
+/vmm-types/  @LucentOpenSoftware
+
+# GUI
+/vmm-gui/    @LucentOpenSoftware
+
+# API
+/vmm-api/    @LucentOpenSoftware
+
+# CLI
+/vmm-cli/    @LucentOpenSoftware
+
+# Packaging
+/packaging/  @LucentOpenSoftware
+
+# Documentation
+/docs/       @LucentOpenSoftware
+
+# CI / GitHub config
+/.github/    @LucentOpenSoftware

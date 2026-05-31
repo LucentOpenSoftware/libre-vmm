@@ -1,0 +1,2 @@
+[build]
+rustflags = ["-C", "link-arg=-L/home/neindev8/Escritorio/VM-Soft/libre-vmm/lib"]

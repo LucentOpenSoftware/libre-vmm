@@ -1,0 +1,107 @@
+app-id: org.libre_vmm.LibreVmm
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: libre-vmm
+
+# Build configuration
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/libre-vmm/cargo
+    RUSTFLAGS: -C link-arg=-Wl,-z,relro,-z,now
+
+finish-args:
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+
+  # Audio (SPICE)
+  - --socket=pulseaudio
+
+  # Networking (user-mode SLIRP + libvirt session)
+  - --share=network
+
+  # KVM access
+  - --device=all
+
+  # Required for /dev/kvm specifically
+  - --device=kvm
+
+  # File access — let user pick VMs and ISOs from home
+  - --filesystem=home
+
+  # D-Bus desktop integration
+  - --socket=session-bus
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+
+  # Looking Glass IVSHMEM (advanced)
+  - --device=shm
+
+modules:
+  # libvirt — bundled because Flatpak can't talk to host libvirtd
+  - name: libvirt
+    buildsystem: meson
+    config-opts:
+      - -Ddriver_qemu=enabled
+      - -Ddriver_libvirtd=enabled
+      - -Ddriver_remote=enabled
+      - -Dtests=disabled
+      - -Ddocs=disabled
+      - -Dapparmor=disabled
+      - -Dpolkit=disabled
+      - -Dsasl=disabled
+      - -Dselinux=disabled
+      - -Dnumactl=disabled
+      - -Dudev=disabled
+    sources:
+      - type: archive
+        url: https://libvirt.org/sources/libvirt-10.0.0.tar.xz
+        sha256: REPLACE_WITH_REAL_HASH_BEFORE_BUILD
+
+  # swtpm — bundled for TPM 2.0 emulation
+  - name: swtpm
+    sources:
+      - type: archive
+        url: https://github.com/stefanberger/swtpm/archive/v0.8.0.tar.gz
+        sha256: REPLACE_WITH_REAL_HASH
+
+  # OVMF firmware (TianoCore EDK2) — needed for UEFI VMs
+  # In a real build we'd copy the .fd files from edk2-ovmf at build time
+  - name: edk2-ovmf
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/share/edk2/x64
+      - cp OVMF_CODE.fd /app/share/edk2/x64/OVMF_CODE.fd
+      - cp OVMF_VARS.fd /app/share/edk2/x64/OVMF_VARS.fd
+    sources:
+      - type: archive
+        url: https://retrace.fedoraproject.org/faf/reports/REPLACE_OVMF_TARBALL_URL
+        sha256: REPLACE_WITH_REAL_HASH
+        strip-components: 0
+
+  # libre-vmm itself
+  - name: libre-vmm
+    buildsystem: simple
+    build-commands:
+      # Build all workspace members
+      - cargo build --release --workspace --offline
+      # Install binaries
+      - install -Dm755 target/release/vmm-gui /app/bin/libre-vmm
+      - install -Dm755 target/release/vmm-cli /app/bin/vmm
+      - install -Dm755 target/release/vmm-api /app/bin/vmm-api
+      # Desktop entry
+      - install -Dm644 libre-vmm.desktop /app/share/applications/org.libre_vmm.LibreVmm.desktop
+      # Icon (if present)
+      - test -f assets/icon.png && install -Dm644 assets/icon.png /app/share/icons/hicolor/256x256/apps/org.libre_vmm.LibreVmm.png || true
+      # AppData / metainfo
+      - install -Dm644 packaging/flatpak/org.libre_vmm.LibreVmm.metainfo.xml /app/share/metainfo/org.libre_vmm.LibreVmm.metainfo.xml
+    sources:
+      - type: dir
+        path: ../../
+      # Vendored cargo deps — generated with `flatpak-cargo-generator` from Cargo.lock
+      - cargo-sources.json

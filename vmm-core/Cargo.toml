@@ -1,0 +1,36 @@
+[package]
+name = "vmm-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "Core VM management library wrapping libvirt/QEMU"
+
+[dependencies]
+vmm-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+dirs = { workspace = true }
+virt = "0.4"
+quick-xml = { version = "0.37", features = ["serialize"] }
+bytesize = { version = "2", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tar = "0.4"
+libc = "0.2"
+# Wave 12.7: declarative VM specs (TOML/YAML import/export).
+toml = "0.8"
+# NOTE: serde_yaml is deprecated upstream but has no stable maintained
+# alternative for serde-yaml integration. May migrate to `serde_yaml_ng` later.
+serde_yaml = "0.9"

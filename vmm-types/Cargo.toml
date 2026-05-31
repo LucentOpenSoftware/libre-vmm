@@ -1,0 +1,24 @@
+[package]
+name = "vmm-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "Libre VMM — Pure data types, cross-platform (no I/O)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+bytesize = { version = "2", features = ["serde"] }
+# tracing is a pure logging facade (no I/O of its own — subscribers handle output).
+# Used by `validate_config_bounds` to log clamping warnings; harmless on any platform.
+tracing = { workspace = true }

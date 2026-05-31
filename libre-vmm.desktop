@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Libre VMM
+Comment=Virtual Machine Manager — Create and run virtual machines
+Exec=libre-vmm
+Icon=libre-vmm
+Terminal=false
+Type=Application
+Categories=System;Emulator;
+Keywords=virtual;machine;vm;qemu;kvm;virtualization;
+StartupWMClass=libre-vmm

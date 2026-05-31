@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/LucentOpenSoftware/libre-vmm/security/policy
+    about: Please follow the security disclosure policy in SECURITY.md
+  - name: Documentation feedback
+    url: https://github.com/LucentOpenSoftware/libre-vmm/blob/main/docs/
+    about: For docs improvements, see the docs/ directory
+  - name: Roadmap discussion
+    url: https://github.com/LucentOpenSoftware/libre-vmm/blob/main/docs/ROADMAP.md
+    about: See ROADMAP.md for planned waves

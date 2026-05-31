@@ -1,0 +1,9 @@
+[toolchain]
+# Pin to a specific stable release for reproducible builds across contributors
+# and CI. Matches the toolchain the project is currently built and tested with.
+channel = "1.93"
+components = ["rustfmt", "clippy", "rust-src"]
+profile = "default"
+# Cross-compile targets — declared here so `cargo build --target X` works
+# without manually running `rustup target add` on each developer machine.
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-gnu"]

@@ -1,0 +1,30 @@
+[workspace]
+members = ["vmm-types", "vmm-core", "vmm-gui", "vmm-cli", "vmm-api"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Libre VMM Contributors"]
+license = "GPL-3.0-or-later"
+description = "A simplified, libre alternative to VMware Workstation"
+repository = "https://github.com/LucentOpenSoftware/libre-vmm"
+homepage = "https://github.com/LucentOpenSoftware/libre-vmm"
+documentation = "https://github.com/LucentOpenSoftware/libre-vmm/blob/main/README.md"
+readme = "README.md"
+keywords = ["virtualization", "qemu", "kvm", "libvirt", "vm"]
+categories = ["virtualization", "command-line-utilities"]
+rust-version = "1.79"
+
+[workspace.dependencies]
+vmm-types = { path = "vmm-types" }
+vmm-core = { path = "vmm-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "6"

@@ -1,0 +1,70 @@
+Libre VMM Authors
+=================
+
+This file lists the primary contributors to the Libre VMM project. The
+complete commit history in the Git repository at
+https://github.com/LucentOpenSoftware/libre-vmm is the authoritative
+record.
+
+Original author and maintainers
+-------------------------------
+
+- The Libre VMM contributors
+
+
+Direct upstream attributions
+----------------------------
+
+Libre VMM stands on the work of mature open-source projects. We thank:
+
+- The QEMU project — the hypervisor we build on
+- The libvirt project — the management API we wrap
+- The TianoCore / EDK2 project — the firmware our LibreUEFI fork derives from
+- The Linux kernel KVM subsystem — our acceleration substrate
+- The Rust language and ecosystem teams
+- The egui / eframe project — the UI toolkit
+- The Axum project — the REST API framework
+- The Tokio project — the async runtime
+- The serde and quick-xml projects — serialization plumbing
+- The spice-gtk project — the SPICE client
+
+
+Projects whose ideas, patterns, or code informed Libre VMM
+----------------------------------------------------------
+
+In keeping with the project's borrow-then-rewrite policy, Libre VMM
+draws inspiration from several established VM tooling projects. Where we
+adopted concepts, configuration formats, or code patterns, we credit the
+originating project:
+
+- OSX-KVM (kholia/osx-kvm) — macOS guest support patterns
+- vm-curator (mroboff/vm-curator) — import wizard architecture, PCI
+  scanner approach, OS profile catalog
+- Lima (lima-vm/lima) — automatic guest port forwarding, cloud image
+  templates, file-sharing concepts
+- Vectras VM (xoureldeen/Vectras-VM-Android) — QMP integration patterns,
+  ROM management ideas
+- Quickgui / Quickemu (quickemu-project) — OS download wizard flow,
+  searchable OS catalog, SSH-detection technique
+- Proxmox VE — cloud-init wiring, backup retention design, VM template
+  and clone semantics, per-VM firewall rule format
+- VirtualBox — snapshot tree visualization concepts, virtual media
+  manager, basic / expert UI mode dichotomy
+- VMware Workstation — the parity target that defines our feature
+  matrix; we do not reuse any VMware code
+
+
+How to be added to this file
+----------------------------
+
+Significant contributions earn an entry here. "Significant" is judged
+qualitatively, not by line count: a well-targeted bug fix on a critical
+path, a packaging effort for a new distribution, or a sustained
+contribution to translation or documentation all qualify.
+
+To request an entry, open a pull request adding your preferred name (or
+pseudonym), optional contact, and optional brief tag of your primary
+contribution area. The maintainers will review.
+
+For one-time small contributions, the Git commit log carries authorship
+and is the canonical record.
