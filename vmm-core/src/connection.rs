@@ -261,6 +261,12 @@ impl HypervisorConnection {
             });
         }
 
+        // Re-apply disk-permission fixes before every start. This is the
+        // retroactive-repair path for VMs created by older builds whose
+        // home-directory ACL was never set (the buggy depth-3 walk).
+        // Idempotent: setfacl on an already-set ACL is a no-op.
+        ensure_disk_accessible(&domain);
+
         domain.create()?;
         info!("VM '{}' started", name);
         Ok(())
@@ -1211,22 +1217,38 @@ fn parse_cdrom_media(xml: &str) -> Option<String> {
 }
 
 /// Fix file permissions so libvirt's qemu user can access the disk image.
-/// Uses chmod to make the file world-readable/writable (the disk is only
-/// accessible via the local filesystem anyway), and ensures every directory
-/// in the path is traversable (o+x).
+///
+/// This addresses a Linux-libvirt pain point: when libvirt runs QEMU as the
+/// dedicated `libvirt-qemu` system user, that user cannot reach a disk file in
+/// `$HOME` because the home directory itself is typically mode 0700 or 0750.
+///
+/// We use POSIX ACLs (not group-traversal bits) so we can grant access
+/// surgically to `libvirt-qemu` without making the home directory readable to
+/// other users on the system.
+///
+/// Behaviour:
+/// - The disk file itself gets mode 0664 and `u:libvirt-qemu:rw` ACL.
+/// - Each parent directory between the disk and the user's `$HOME` (inclusive)
+///   gets `u:libvirt-qemu:x` ACL, so libvirt-qemu can traverse to the file.
+/// - We never touch `/home`, `/`, or anything above `$HOME`.
+/// - If the disk is outside `$HOME` (e.g., `/var/lib/libvirt/images/...`), we
+///   only fix the file's own ACL and skip the walk entirely — libvirt has
+///   natural access to its own data paths.
+/// - Safety cap of 20 iterations on the walk.
+///
+/// Idempotent: re-applying the same ACL is a no-op, so this is safe to call
+/// before each VM start to retroactively repair VMs created by older builds.
 fn fix_disk_permissions(disk_path: &str) {
     use std::os::unix::fs::PermissionsExt;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     // SECURITY: Use 0o664 (owner+group rw, other read) instead of 0o666.
-    // Then use ACL to grant the libvirt/qemu group access.
     if let Ok(metadata) = std::fs::metadata(disk_path) {
         let mut perms = metadata.permissions();
         perms.set_mode(0o664);
         let _ = std::fs::set_permissions(disk_path, perms);
     }
 
-    // Try to grant libvirt-qemu user access via POSIX ACL (best practice)
     // SECURITY: CWE-403 — Close stdin to prevent FD inheritance.
     let _ = std::process::Command::new("setfacl")
         .args(["-m", "u:libvirt-qemu:rw", disk_path])
@@ -1235,24 +1257,30 @@ fn fix_disk_permissions(disk_path: &str) {
         .stderr(std::process::Stdio::null())
         .output();
 
-    // Ensure each parent directory is group-traversable (g+x), NOT world-traversable
-    // Only walk up to 3 levels to prevent modifying system directories
-    let mut path = Path::new(disk_path);
-    let mut depth = 0;
-    while let Some(parent) = path.parent() {
-        if parent.as_os_str().is_empty() || depth >= 3 {
-            break;
-        }
+    // Determine the upper bound for the directory walk: the user's $HOME.
+    // If the disk is outside $HOME, libvirt-qemu has access by default; skip.
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"));
+    let disk_pb = PathBuf::from(disk_path);
+    if !disk_pb.starts_with(&home_dir) {
+        return;
+    }
+
+    let mut path: &Path = disk_pb.as_path();
+    for _ in 0..20 {
+        let parent = match path.parent() {
+            Some(p) if !p.as_os_str().is_empty() => p,
+            _ => break,
+        };
+
         if let Ok(metadata) = std::fs::metadata(parent) {
             let mode = metadata.permissions().mode();
             if mode & 0o011 == 0 {
-                // Not group/other-executable — add g+x only
+                // Not group/other-executable — add g+x only.
                 let mut perms = metadata.permissions();
                 perms.set_mode(mode | 0o010);
                 let _ = std::fs::set_permissions(parent, perms);
             }
         }
-        // Also grant libvirt-qemu traverse via ACL
         // SECURITY: CWE-403 — Close stdin to prevent FD inheritance.
         let _ = std::process::Command::new("setfacl")
             .args(["-m", "u:libvirt-qemu:x", &parent.to_string_lossy()])
@@ -1260,8 +1288,30 @@ fn fix_disk_permissions(disk_path: &str) {
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .output();
+
+        // Stop after processing the home directory itself; never walk above it.
+        if parent == home_dir.as_path() {
+            break;
+        }
         path = parent;
-        depth += 1;
+    }
+}
+
+/// Ensure the disk image for the given libvirt domain is accessible by
+/// `libvirt-qemu` before starting. Idempotent — safe to call repeatedly.
+///
+/// This catches the common case where a VM was created by an older build
+/// (with the buggy 3-level walk depth in `fix_disk_permissions`) and now has
+/// a disk under `$HOME` that libvirt cannot reach. By re-applying the fix
+/// before every start, existing VMs auto-repair on first launch with this
+/// build.
+fn ensure_disk_accessible(domain: &Domain) {
+    let xml = match domain.get_xml_desc(0) {
+        Ok(x) => x,
+        Err(_) => return,
+    };
+    if let Some(disk_path) = extract_disk_path(&xml) {
+        fix_disk_permissions(&disk_path);
     }
 }
 

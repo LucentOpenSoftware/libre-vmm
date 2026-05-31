@@ -1,4 +1,0 @@
-target/release/vmm-gui usr/bin/libre-vmm
-target/release/vmm-cli usr/bin/vmm
-target/release/vmm-api usr/bin/vmm-api
-libre-vmm.desktop usr/share/applications/

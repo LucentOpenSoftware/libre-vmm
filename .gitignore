@@ -43,6 +43,16 @@ flamegraph.svg
 /lib/pkgconfig/libvirt.pc
 # (these are created by build.sh as workaround for missing libvirt-dev)
 
+# Debian build artifacts (created when building the .deb in-tree)
+/debian
+/packaging/debian/.debhelper/
+/packaging/debian/debhelper-build-stamp
+/packaging/debian/files
+/packaging/debian/libre-vmm/
+/packaging/debian/libre-vmm.substvars
+/packaging/debian/*.debhelper.log
+/packaging/debian/*.substvars
+
 # Local test artifacts
 test_spice.py.lock
 

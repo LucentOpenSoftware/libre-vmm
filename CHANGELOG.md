@@ -153,6 +153,11 @@ Workspace: `vmm-types`, `vmm-core`, `vmm-gui`, `vmm-cli`, `vmm-api`.
 - `docs/libreuefi-guest-os-requirements.md` — firmware requirements for guests
 - `docs/openapi.json` — generated OpenAPI 3.1 spec
 
+### Fixed
+
+- **Disk permission walk now reaches the user's `$HOME` directory.** Previously, `vmm-core::connection::fix_disk_permissions` walked at most 3 parent directories up from the disk file, which for a disk at `~/.local/share/libre-vmm/disks/<uuid>.qcow2` stopped at `~/.local/` and never granted libvirt-qemu the `x` ACL on `~` itself. Result: VMs with disks under the user's home directory failed to start with `Cannot access storage file ... Permission denied`. The walk now continues up to (and includes) `$HOME`, never above it, with a 20-iteration safety cap. Disks outside `$HOME` (e.g., `/var/lib/libvirt/images/...`) skip the walk entirely since libvirt-qemu has natural access there.
+- **VM start now auto-repairs disk permissions.** `start_vm` now calls a new `ensure_disk_accessible` helper that idempotently re-applies the fix before each launch. VMs created by older builds with the buggy depth-3 walk will auto-repair on first start under this build — no manual `setfacl` required.
+
 ### Architecture notes
 - `vmm-types` (pure data, no I/O) extracted from `vmm-core`. 3,243 lines: 11 enums, 8 structs, plus referenced helpers. Compiles cleanly for `x86_64-pc-windows-gnu`. Foundation for the Windows port (see [`docs/WINDOWS-PORT.md`](docs/WINDOWS-PORT.md), Wave 16.A1).
 - Workspace dependencies pinned: `serde 1`, `tokio 1`, `anyhow 1`, `thiserror 2`, `tracing 0.1`, `uuid 1`, `dirs 6`, `eframe`/`egui 0.30`, `axum 0.8`.
