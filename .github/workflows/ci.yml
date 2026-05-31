@@ -16,7 +16,7 @@ jobs:
     name: Test on Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: |
@@ -56,7 +56,7 @@ jobs:
     name: Format check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -66,7 +66,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install system deps
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev pkg-config libgtk-3-dev
       - uses: dtolnay/rust-toolchain@stable
@@ -78,7 +78,7 @@ jobs:
     name: Windows cross-compile (vmm-types)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-gnu
@@ -88,7 +88,7 @@ jobs:
     name: Security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: EmbarkStudios/cargo-deny-action@v1
 
@@ -96,7 +96,7 @@ jobs:
     name: OpenAPI spec freshness
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install system deps
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev pkg-config libgtk-3-dev
       - uses: dtolnay/rust-toolchain@stable
