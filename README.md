@@ -296,3 +296,119 @@ Libre VMM stands on a stack of excellent libre projects:
 We also borrow ideas, configuration patterns, and (where licensed
 compatibly) code from upstream projects listed in [AUTHORS](AUTHORS) and
 documented in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+---
+
+## A Small Historical Note
+
+Libre VMM began with a simple idea:
+
+> Virtual machines should not require becoming a virtualization engineer.
+
+The original goal was modest.
+
+A few improvements here.
+A few workflow fixes there.
+
+At some point, however, the project acquired:
+
+* a REST API
+* a CLI
+* migration tooling
+* GPU passthrough helpers
+* twenty-four architectures
+* a firmware fork
+
+The exact sequence of events remains under investigation.
+
+Researchers believe Libre VMM may once have been related to a Virt-Manager fork, though surviving records are incomplete.
+
+### Recovered Conversation
+
+Libre-VMM:
+"Hey."
+
+LibreUEFI:
+"Yeah?"
+
+Libre-VMM:
+"Do you remember how this started?"
+
+LibreUEFI:
+"No."
+
+Libre-VMM:
+"You don't?"
+
+LibreUEFI:
+"I thought we always did virtualization."
+
+Libre-VMM:
+"We didn't."
+
+LibreUEFI:
+"We didn't?"
+
+Libre-VMM:
+"No."
+
+LibreUEFI:
+"Then how did we end up with a firmware fork?"
+
+Libre-VMM:
+"I don't know."
+
+LibreUEFI:
+"And the API?"
+
+Libre-VMM:
+"I don't know."
+
+LibreUEFI:
+"And migration?"
+
+Libre-VMM:
+"I don't know."
+
+LibreUEFI:
+"And twenty-four architectures?"
+
+Libre-VMM:
+"I definitely don't know."
+
+...
+
+LibreUEFI:
+"Weren't we a Virt-Manager fork?"
+
+Libre-VMM:
+"I think so."
+
+LibreUEFI:
+"That's weird."
+
+Libre-VMM:
+"Yeah."
+
+...
+
+LibreUEFI:
+"Do you think we're done?"
+
+Libre-VMM:
+"No."
+
+LibreUEFI:
+"Why?"
+
+Libre-VMM:
+"I have a feeling we're about to invent something else."
+
+...
+
+[End of recovered transcript]
+
+Researchers believe this conversation occurred shortly before the appearance of the ISO manager, template repository, and VM marketplace.
+
+Further incidents are expected.
+
