@@ -1,3 +1,5 @@
+<img width="1983" height="793" alt="imagen" src="https://github.com/user-attachments/assets/a1343bd8-7957-4eb6-850d-309563890914" />
+
 # Libre VMM
 
 > A libre desktop VM manager for Linux, built on QEMU/KVM + libvirt + Rust.
