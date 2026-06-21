@@ -15,7 +15,7 @@ jobs:
     name: Build Linux release artifacts
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-linux
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install build deps
         run: |
           sudo apt-get update
@@ -70,7 +70,7 @@ jobs:
     container: fedora:40
     needs: build-linux
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install build deps
         run: dnf install -y rust cargo libvirt-devel gtk3-devel pkgconfig rpm-build
       - name: Build .rpm
@@ -90,7 +90,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           path: artifacts/
